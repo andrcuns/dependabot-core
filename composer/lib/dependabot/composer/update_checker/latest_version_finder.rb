@@ -36,7 +36,7 @@ module Dependabot
           @package_details ||= fetcher.fetch
         end
 
-        private
+        protected
 
         sig do
           override
@@ -67,6 +67,8 @@ module Dependabot
           releases = filter_lower_versions(releases)
           releases.min_by(&:version)&.version
         end
+
+        private
 
         sig { returns(T::Boolean) }
         def wants_prerelease?

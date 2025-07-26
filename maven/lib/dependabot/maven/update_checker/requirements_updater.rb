@@ -64,6 +64,16 @@ module Dependabot
           end
         end
 
+        sig { override.returns(T::Class[Version]) }
+        def version_class
+          Maven::Version
+        end
+
+        sig { override.returns(T::Class[Requirement]) }
+        def requirement_class
+          Maven::Requirement
+        end
+
         private
 
         sig { returns(T::Array[T::Hash[Symbol, T.untyped]]) }
@@ -89,16 +99,6 @@ module Dependabot
           old_version = requirement_class.new(req_string)
                                          .requirements.first.last
           req_string.gsub(old_version.to_s, latest_version.to_s)
-        end
-
-        sig { override.returns(T::Class[Version]) }
-        def version_class
-          Maven::Version
-        end
-
-        sig { override.returns(T::Class[Requirement]) }
-        def requirement_class
-          Maven::Requirement
         end
 
         sig { returns(T::Hash[Symbol, String]) }
