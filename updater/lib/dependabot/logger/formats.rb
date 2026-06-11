@@ -7,7 +7,7 @@ require "logger"
 # the global log helper defined in common/lib/dependabot/logger.rb
 module Dependabot
   module Logger
-    TIME_FORMAT = "%Y/%m/%d %H:%M:%S"
+    TIME_FORMAT = ENV.fetch("DEPENDABOT_LOG_TIME_FORMAT", "%Y/%m/%d %H:%M:%S")
 
     class BasicFormatter < ::Logger::Formatter
       extend T::Sig
