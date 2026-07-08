@@ -999,5 +999,12 @@ module Dependabot
       super("snapshots_unavailable_graph_error", message)
     end
   end
+
+  class PullRequestLimitReached < TypedDependabotError
+    sig { params(message: T.any(T.nilable(String), MatchData)).void }
+    def initialize(message = nil)
+      super("pull_request_limit_reached", message)
+    end
+  end
 end
 # rubocop:enable Metrics/ModuleLength
