@@ -45,7 +45,10 @@ module Dependabot
         api_url = "#{api_path}/update_jobs/#{job_id}/create_pull_request"
         data = create_pull_request_data(dependency_change, base_commit_sha)
         response = post(path: api_url, body: { data: data }.to_json)
-        if response.status >= 400 && dependency_file_not_supported_error?(response.body.to_s)
+
+        if response.status == 409 && pull_request_limit_reached?(response.body.to_s)
+          raise Dependabot::PullRequestLimitReached, "Maximum number of open pull requests reached"
+        elsif response.status >= 400 && dependency_file_not_supported_error?(response.body.to_s)
           raise Dependabot::DependencyFileNotSupported, response.body.to_s
         elsif response.status >= 400
           raise ApiError, response.body
@@ -613,6 +616,14 @@ module Dependabot
       INVALID_REQUEST_MSG.match?(detail)
     rescue JSON::ParserError, TypeError => e
       raise ApiError, "Malformed API error response: #{e.message}"
+    end
+
+    sig { params(response: String).returns(T::Boolean) }
+    def pull_request_limit_reached?(response)
+      body = JSON.parse(response)
+      return false unless body.is_a?(Hash)
+
+      body["error"] == "open_pull_request_limit_reached"
     end
   end
 end

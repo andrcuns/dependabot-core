@@ -81,6 +81,7 @@ module Dependabot
         # If the error is fatal for the run, we should re-raise it rather than
         # pass it back to the service.
         raise error if RUN_HALTING_ERRORS.keys.any? { |err| error.is_a?(err) }
+        return record_pull_request_limit_warning(error) if error.is_a?(Dependabot::PullRequestLimitReached)
 
         increment_blocked_versions_enforced_metric(error)
 
@@ -138,6 +139,7 @@ module Dependabot
         # If the error is fatal for the run, we should re-raise it rather than
         # pass it back to the service.
         raise error if RUN_HALTING_ERRORS.keys.any? { |err| error.is_a?(err) }
+        return record_pull_request_limit_warning(error) if error.is_a?(Dependabot::PullRequestLimitReached)
 
         increment_blocked_versions_enforced_metric(error)
 
@@ -190,6 +192,19 @@ module Dependabot
 
       sig { returns(String) }
       attr_reader :operation_name
+
+      sig { params(error: Dependabot::PullRequestLimitReached).void }
+      def record_pull_request_limit_warning(error)
+        description = error.message
+
+        service.record_update_job_warning(
+          warn_type: "open_pull_request_limit_reached",
+          warn_title: "Open pull request limit reached",
+          warn_description: description
+        )
+
+        Dependabot.logger.info(description)
+      end
 
       # Records the "hard" block status when a selected update is rejected because
       # a blocked transitive version was about to ship in the regenerated files.
