@@ -44,7 +44,7 @@ module Dependabot
 
         api_url = "#{api_path}/update_jobs/#{job_id}/create_pull_request"
         data = create_pull_request_data(dependency_change, base_commit_sha)
-        response = post(path: api_url, body: { data: data }.to_json)
+        response = post(path: api_url, body: { data: data }.to_json, read_timeout: pull_request_timeout)
 
         if response.status == 409 && pull_request_limit_reached?(response.body.to_s)
           raise Dependabot::PullRequestLimitReached, "Maximum number of open pull requests reached"
@@ -80,7 +80,7 @@ module Dependabot
           "pr-title": dependency_change.pr_message.pr_name,
           "pr-body": dependency_change.pr_message.pr_message
         }
-        response = post(path: api_url, body: { data: data }.to_json)
+        response = post(path: api_url, body: { data: data }.to_json, read_timeout: pull_request_timeout)
         raise ApiError, response.body if response.status >= 400
       rescue Excon::Error::Socket, Excon::Error::Timeout, OpenSSL::SSL::SSLError
         retry_count ||= 0
@@ -422,9 +422,9 @@ module Dependabot
 
     private
 
-    sig { params(path: String, body: String).returns(Excon::Response) }
-    def post(path:, body:)
-      T.cast(http_client.post(path: path, body: body), Excon::Response)
+    sig { params(path: String, body: String, read_timeout: T.nilable(Integer)).returns(Excon::Response) }
+    def post(path:, body:, read_timeout: nil)
+      T.cast(http_client.post(**{ path: path, body: body, read_timeout: read_timeout }.compact), Excon::Response)
     end
 
     sig { params(path: String, body: String).returns(Excon::Response) }
@@ -630,6 +630,17 @@ module Dependabot
       return false unless body.is_a?(Hash)
 
       body["error"] == "open_pull_request_limit_reached"
+    end
+
+    sig { returns(T.nilable(Integer)) }
+    def pull_request_timeout
+      value = ENV.fetch("DEPENDABOT_PULL_REQUEST_TIMEOUT", nil)
+      return if value.nil? || value.strip.empty?
+
+      timeout = Integer(value, 10)
+      raise ArgumentError, "DEPENDABOT_PULL_REQUEST_TIMEOUT must be a positive integer" unless timeout.positive?
+
+      timeout
     end
   end
 end
